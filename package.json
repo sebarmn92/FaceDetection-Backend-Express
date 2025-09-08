@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcrypt-nodejs": "^0.0.3",
     "body-parser": "2.2.0",
     "clarifai-nodejs": "^0.2.1",
     "cors": "^2.8.5",

@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const bcrypt = require('bcrypt-nodejs');
 
 const PAT = 'c202b98b870747779bb281dee2f392e6';
 const USER_ID = 'clarifai';
@@ -71,6 +72,8 @@ app.post('/detectface', (req, res) => {
         regions?.forEach ( region => {
         const boundingBox = region.region_info.bounding_box;
 
+        console.log(region.region_info.bounding_box)
+
         responseArr.push(
             {
                 'topRow' : boundingBox.top_row.toFixed(3),
@@ -92,11 +95,33 @@ app.post('/detectface', (req, res) => {
 
 
 app.post('/signin', (req, res) =>{
+    const {email, password} = req.body;
+    const hash = 'asd6ad7asd6a7da7dsad7'
+
+    bcrypt.compare(password, hash, function(err, res){
+        if(res === true){
+            //perform signin
+        }
+    })
 
 })
 
 
 app.post('/register', (req, res) =>{
+    const {email, name, password} = req. body;
+
+    bcrypt.hash(password, null, null, function(err, hash){
+
+    })
+
+    const user = {
+        id: 125,
+        name: name,
+        email: email,
+        password: password,
+        entries: 0,
+        joined: new Date()
+    }
     
 })
 
@@ -106,7 +131,7 @@ app.get('/profile/:id', (req, res) => {
 })
 
 app.put('/image', (req, res) => {
-    
+
 })
 
 
