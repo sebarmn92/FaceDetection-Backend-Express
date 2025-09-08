@@ -63,10 +63,12 @@ app.post('/detectface', (req, res) => {
     .then(response => response?.json())
     .then(result => {
       
+        console.log(JSON.stringify(result))
+
         let responseArr = [];
         const regions = result.outputs[0].data.regions;
 
-        regions.forEach ( region => {
+        regions?.forEach ( region => {
         const boundingBox = region.region_info.bounding_box;
 
         responseArr.push(
@@ -87,6 +89,25 @@ app.post('/detectface', (req, res) => {
         res.send(e);
         })
 });
+
+
+app.post('/signin', (req, res) =>{
+
+})
+
+
+app.post('/register', (req, res) =>{
+    
+})
+
+app.get('/profile/:id', (req, res) => {
+    const { id } = req.params;
+
+})
+
+app.put('/image', (req, res) => {
+    
+})
 
 
 app.listen(3000, () => {
