@@ -126,12 +126,35 @@ app.post('/register', (req, res) =>{
 })
 
 app.get('/profile/:id', (req, res) => {
+    let userFound = false;
     const { id } = req.params;
+    database.users.forEach( user =>{
+        if( id === user.id){
+            userFound = true;
+            res.json(user);
+        }
+    });
+
+    if(!userFound){
+        res.status(404).json('no such user')
+    }
 
 })
 
 app.put('/image', (req, res) => {
+    let userFound = false;
+    const { id } = req.body;
+    database.users.forEach( user =>{
+        if( id === user.id){
+            userFound = true;
+            user.entries++;
+            res.json(user.entries);
+        }
+    });
 
+    if(!userFound){
+        res.status(404).json('no such user')
+    }
 })
 
 
