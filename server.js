@@ -2,12 +2,24 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcrypt-nodejs');
+const knex = require('knex');
 
 const PAT = 'c202b98b870747779bb281dee2f392e6';
 const USER_ID = 'clarifai';
 const APP_ID = 'main';
 const MODEL_ID = 'face-detection';
 const MODEL_VERSION_ID = '6dc7e46bc9124c5c8824be4822abe105';
+
+const db = knex({
+    client: "pg",
+    connection: {
+        host: '127.0.0.1',
+        port: '5432',
+        user: 'postgres',
+        password: 'nottheactual password',
+        database: 'face_detect_db'
+    }
+});
 
 const app = express();
 
