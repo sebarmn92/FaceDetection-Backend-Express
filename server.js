@@ -16,10 +16,11 @@ const db = knex({
         host: '127.0.0.1',
         port: '5432',
         user: 'postgres',
-        password: 'nottheactual password',
+        password: 'admin',
         database: 'face_detect_db'
     }
 });
+
 
 const app = express();
 
@@ -106,15 +107,35 @@ app.post('/detectface', (req, res) => {
 });
 
 
-app.post('/signin', (req, res) =>{
+app.post('/signin', (req, response) =>{
     const {email, password} = req.body;
-    const hash = 'asd6ad7asd6a7da7dsad7'
 
-    bcrypt.compare(password, hash, function(err, res){
-        if(res === true){
-            //perform signin
+    db('login').where({ 
+        email : `${email.toLowerCase()}`
+    }).then( data => {
+        if(data.length){
+            
+            bcrypt.compare(password, hash, function(err, res){
+                if(res === true){
+                    response.json({
+                        userId : data?.id,
+                        success: true
+                    });
+                } else{
+                    response.json({
+                        userId : 0,
+                        success: false
+                    });
+                }
+            })
         }
-    })
+        else{
+            response.json({
+                userId : 0,
+                success: false
+            });
+        }
+    });
 
 })
 
@@ -122,19 +143,44 @@ app.post('/signin', (req, res) =>{
 app.post('/register', (req, res) =>{
     const {email, name, password} = req. body;
 
-    bcrypt.hash(password, null, null, function(err, hash){
 
+    db('users').where({ 
+        email : `${email.toLowerCase()}`
+    }).then( data => {
+        if(data.length === 0 ){
+            db('users').insert({ 
+                name: name,
+                email: (email.toLowerCase()),
+                joined: new Date()
+                 }).then( (data) => {
+                    if(data.rowCount && data.rowCount !== 0){
+                        bcrypt.hash(password, null, null, function(err, hash){
+                            
+                        db('login').insert({
+                            email : (email.toLowerCase()),
+                            hash : hash
+                        }).then(data => {
+                            if(data.rowCount && data.rowCount !== 0){
+                                res.send('succesfully registered');
+                            }
+                            else{
+                                res.send("error registering")
+                            }                         
+                        });
+
+                    });
+                    }
+                    else{
+                        res.send("error registering")
+                    }
+                 });
+        }
+        else{
+            console.log("user already exists")
+            res.send("user already exists")
+        }
     })
 
-    const user = {
-        id: 125,
-        name: name,
-        email: email,
-        password: password,
-        entries: 0,
-        joined: new Date()
-    }
-    
 })
 
 app.get('/profile/:id', (req, res) => {
