@@ -16,7 +16,7 @@ const db = knex({
         host: '127.0.0.1',
         port: '5432',
         user: 'postgres',
-        password: 'admin',
+        password: 'abcd',
         database: 'face_detect_db'
     }
 });
@@ -114,8 +114,7 @@ app.post('/signin', (req, response) =>{
         email : `${email.toLowerCase()}`
     }).then( data => {
         if(data.length){
-            
-            bcrypt.compare(password, hash, function(err, res){
+            bcrypt.compare(password, data[0].hash, function(err, res){
                 if(res === true){
                     response.json({
                         userId : data?.id,
@@ -141,8 +140,7 @@ app.post('/signin', (req, response) =>{
 
 
 app.post('/register', (req, res) =>{
-    const {email, name, password} = req. body;
-
+    const {email, name, password} = req.body;
 
     db('users').where({ 
         email : `${email.toLowerCase()}`
@@ -157,27 +155,39 @@ app.post('/register', (req, res) =>{
                         bcrypt.hash(password, null, null, function(err, hash){
                             
                         db('login').insert({
-                            email : (email.toLowerCase()),
-                            hash : hash
+                                email : (email.toLowerCase()),
+                                hash : hash
                         }).then(data => {
                             if(data.rowCount && data.rowCount !== 0){
-                                res.send('succesfully registered');
+                                  res.json({
+                                      success : true,
+                                      error : false
+                                  })
                             }
                             else{
-                                res.send("error registering")
+                                res.json({
+                                    success : false,
+                                    error : true
+                                })
                             }                         
                         });
-
+    
                     });
                     }
                     else{
-                        res.send("error registering")
+                        res.json({
+                            success : false,
+                            error : true
+                        })
                     }
                  });
         }
         else{
             console.log("user already exists")
-            res.send("user already exists")
+                res.json({
+                        success : false,
+                        error : false
+                    })
         }
     })
 
