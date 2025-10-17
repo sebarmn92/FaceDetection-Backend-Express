@@ -46,23 +46,6 @@ const logger = winston.createLogger({
   ],
 });
 
-const database = {
-    users: [
-        {
-            id:'123',
-            name:'john',
-            email:'john@gmail.com',
-            password: 'cookies',
-            entries: 0,
-            joined: new Date()
-        }
-    ]
-}
-
-app.get('/', (req, res) => {
-
-    res.send('this is working');
-});
 
 app.post('/detectface', (req, res) => {
     const {imgurl} = req.body;
@@ -94,15 +77,11 @@ app.post('/detectface', (req, res) => {
     .then(response => response?.json())
     .then(result => {
       
-        console.log(JSON.stringify(result))
-
         let responseArr = [];
         const regions = result.outputs[0].data.regions;
 
         regions?.forEach ( region => {
         const boundingBox = region.region_info.bounding_box;
-
-        console.log(region.region_info.bounding_box)
 
         responseArr.push(
             {
@@ -117,10 +96,10 @@ app.post('/detectface', (req, res) => {
         res.send(
             JSON.stringify(responseArr)
         );
-        }).catch(e => {
-        console.log(e);
-        res.send(e);
-        })
+        }).catch((e) => logger.log({
+                        level : 'error',
+                        message : e
+                    }))
 });
 
 
@@ -213,36 +192,17 @@ app.post('/register', (req, res) =>{
         }));
 })
 
-app.get('/profile/:id', (req, res) => {
-    let userFound = false;
-    const { id } = req.params;
-    database.users.forEach( user =>{
-        if( id === user.id){
-            userFound = true;
-            res.json(user);
-        }
-    });
-
-    if(!userFound){
-        res.status(404).json('no such user')
-    }
-
-})
-
 app.put('/image', (req, res) => {
-    let userFound = false;
-    const { id } = req.body;
-    database.users.forEach( user =>{
-        if( id === user.id){
-            userFound = true;
-            user.entries++;
-            res.json(user.entries);
-        }
-    });
+    const { id, entries } = req.body;
+    db('users').where({ 'id':id}).update('entries', entries).then(() => {
+        res.status(200).json(entries)
+    }).catch((e) => {
+        logger.log({
+            level : 'error',
+            message : e
+        })
+    })
 
-    if(!userFound){
-        res.status(404).json('no such user')
-    }
 })
 
 
