@@ -3,8 +3,10 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcrypt-nodejs');
 const knex = require('knex');
+const winston = require('winston');
+const helmet = require('helmet')
 
-const PAT = 'c202b98b870747779bb281dee2f392e6';
+const PAT = 'c202b98b870747779bb281dee2f392e6'; //should not provide this, but want you to check the app out
 const USER_ID = 'clarifai';
 const APP_ID = 'main';
 const MODEL_ID = 'face-detection';
@@ -16,7 +18,7 @@ const db = knex({
         host: '127.0.0.1',
         port: '5432',
         user: 'postgres',
-        password: 'abcd',
+        password: 'jocking',
         database: 'face_detect_db'
     }
 });
@@ -26,8 +28,23 @@ const app = express();
 
 app.use(express.json());
 
+app.use(helmet())
+
 app.use(bodyParser.json());
 app.use(cors());
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'logs/combined.log' })
+  ],
+});
 
 const database = {
     users: [
@@ -113,84 +130,87 @@ app.post('/signin', (req, response) =>{
     db('login').where({ 
         email : `${email.toLowerCase()}`
     }).then( data => {
-        if(data.length){
+        if(data.length !==0 ){
             bcrypt.compare(password, data[0].hash, function(err, res){
                 if(res === true){
-                    response.json({
-                        userId : data?.id,
-                        success: true
-                    });
+                    db('users').where({ 
+                            email : `${email.toLowerCase()}`
+                        }).then( (data) => {
+                            if(data.length !==0 ){
+                                response.status(200).json(data[0]);
+                            }
+                            else{
+                                response.status(500).json('Something went wrong. Contact system administrator');
+                            }
+                            
+                        }).catch((e) => logger.log({
+                        level : 'error',
+                        message : e
+                    }))
                 } else{
-                    response.json({
-                        userId : 0,
-                        success: false
-                    });
+                    response.status(403).json('Incorrect e-mail or password');
                 }
             })
         }
         else{
-            response.json({
-                userId : 0,
-                success: false
-            });
+            response.status(403).json('Incorrect e-mail or password');
         }
-    });
-
+    }).catch((e) => logger.log({
+                        level : 'error',
+                        message : e
+                    }))
 })
 
 
 app.post('/register', (req, res) =>{
     const {email, name, password} = req.body;
 
+    //email must be unique. check before inserting
     db('users').where({ 
         email : `${email.toLowerCase()}`
-    }).then( data => {
+    }).then( (data) => {
         if(data.length === 0 ){
             db('users').insert({ 
                 name: name,
                 email: (email.toLowerCase()),
                 joined: new Date()
-                 }).then( (data) => {
-                    if(data.rowCount && data.rowCount !== 0){
-                        bcrypt.hash(password, null, null, function(err, hash){
-                            
-                        db('login').insert({
-                                email : (email.toLowerCase()),
-                                hash : hash
-                        }).then(data => {
-                            if(data.rowCount && data.rowCount !== 0){
-                                  res.json({
-                                      success : true,
-                                      error : false
-                                  })
+                 }).then( () => {
+                    //email must be unique. check before inserting
+                    db('login').where({ 
+                                        email : `${email.toLowerCase()}`
+                                      })
+                        .then( (data) => { 
+                            if(data.length === 0 ){
+                                bcrypt.hash(password, null, null, function(err, hash){                          
+                                    db('login').insert({
+                                            email : (email.toLowerCase()),
+                                            hash : hash
+                                    }).then(() => {res.status(200).json('User registered')
+                                    }).catch((e) => logger.log({
+                                        level : 'error',
+                                        message : e
+                                    }))
+                                })
                             }
                             else{
-                                res.json({
-                                    success : false,
-                                    error : true
-                                })
-                            }                         
-                        });
-    
-                    });
-                    }
-                    else{
-                        res.json({
-                            success : false,
-                            error : true
-                        })
-                    }
-                 });
+                                res.status(403).json("Mail already used. Try using a different mail")
+                            }
+                        }).catch((e) => logger.log({
+                            level : 'error',
+                            message : e
+                        }));
+                 }).catch((e) => logger.log({
+                    level : 'error',
+                    message : e
+                }));
         }
         else{
-            console.log("user already exists")
-                res.json({
-                        success : false,
-                        error : false
-                    })
+            res.status(403).json("Mail already used. Try using a different mail")
         }
-    })
-
+    }).catch((e) => logger.log({
+            level : 'error',
+            message : e
+        }));
 })
 
 app.get('/profile/:id', (req, res) => {
