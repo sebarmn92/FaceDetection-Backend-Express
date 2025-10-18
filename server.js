@@ -144,58 +144,75 @@ app.post('/signin', (req, response) =>{
 app.post('/register', (req, res) =>{
     const {email, name, password} = req.body;
 
+    db.transaction( trx => {
     //email must be unique. check before inserting
-    db('users').where({ 
-        email : `${email.toLowerCase()}`
-    }).then( (data) => {
-        if(data.length === 0 ){
-            db('users').insert({ 
-                name: name,
-                email: (email.toLowerCase()),
-                joined: new Date()
-                 }).then( () => {
-                    //email must be unique. check before inserting
-                    db('login').where({ 
-                                        email : `${email.toLowerCase()}`
-                                      })
-                        .then( (data) => { 
-                            if(data.length === 0 ){
-                                bcrypt.hash(password, null, null, function(err, hash){                          
-                                    db('login').insert({
-                                            email : (email.toLowerCase()),
-                                            hash : hash
-                                    }).then(() => {res.status(200).json('User registered')
-                                    }).catch((e) => logger.log({
-                                        level : 'error',
-                                        message : e
-                                    }))
-                                })
-                            }
-                            else{
-                                res.status(403).json("Mail already used. Try using a different mail")
-                            }
-                        }).catch((e) => logger.log({
-                            level : 'error',
-                            message : e
-                        }));
-                 }).catch((e) => logger.log({
-                    level : 'error',
-                    message : e
-                }));
-        }
-        else{
-            res.status(403).json("Mail already used. Try using a different mail")
-        }
-    }).catch((e) => logger.log({
-            level : 'error',
-            message : e
-        }));
+        trx('users').where({ 
+            email : `${email.toLowerCase()}`
+        }).then( (data) => {
+            if(data.length === 0 ){
+                trx('users').insert({ 
+                    name: name,
+                    email: (email.toLowerCase()),
+                    joined: new Date()
+                    }).then( () => {
+                        //email must be unique. check before inserting
+                        trx('login').where({ 
+                                            email : `${email.toLowerCase()}`
+                                        })
+                            .then( (data) => { 
+                                if(data.length === 0 ){
+                                    bcrypt.hash(password, null, null, function(err, hash){                          
+                                        trx('login').insert({
+                                                email : (email.toLowerCase()),
+                                                hash : hash
+                                        }).then(() => {
+                                            trx.commit()
+                                            res.status(200).json('User registered')
+                                        }).catch((e) => {
+                                            trx.rollback()
+                                            logger.log({
+                                            level : 'error',
+                                            message : e
+                                        })})
+                                    })
+                                }
+                                else{
+                                    trx.rollback()
+                                    res.status(403).json("Mail already used. Try using a different mail")
+                                }
+                            }).catch((e) => {
+                                trx.rollback()
+                                logger.log({
+                                level : 'error',
+                                message : e
+                            })});
+                    }).catch((e) => {
+                        trx.rollback()
+                        logger.log({
+                        level : 'error',
+                        message : e
+                    })});
+            }
+            else{
+                trx.rollback()
+                res.status(403).json("Mail already used. Try using a different mail")
+            }
+        }).catch((e) => {
+                trx.rollback()
+                logger.log({
+                level : 'error',
+                message : e
+            })})
+    })
 })
 
 app.put('/image', (req, res) => {
     const { id, entries } = req.body;
-    db('users').where({ 'id':id}).update('entries', entries).then(() => {
-        res.status(200).json(entries)
+    db('users').where({ 'id':id})
+    .increment('entries', 1)
+    .returning('entries')
+    .then((data) => {
+        res.status(200).json(data[0].entries)
     }).catch((e) => {
         logger.log({
             level : 'error',
