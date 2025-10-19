@@ -5,6 +5,9 @@ const bcrypt = require('bcrypt-nodejs');
 const knex = require('knex');
 const winston = require('winston');
 const helmet = require('helmet')
+const dotenv = require('dotenv')
+
+dotenv.config()
 
 const detectFace = require('./controllers/detectface');
 const register = require('./controllers/register');
@@ -14,11 +17,11 @@ const entries = require('./controllers/entries');
 const db = knex({
     client: "pg",
     connection: {
-        host: '127.0.0.1',
-        port: '5432',
-        user: 'postgres',
-        password: 'jocking',
-        database: 'face_detect_db'
+        host: process.env.HOST,
+        port: process.env.DB_PORT,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASS,
+        database: process.env.DB_NAME
     }
 });
 
@@ -45,7 +48,7 @@ const logger = winston.createLogger({
 
 
 app.post('/detectface', (req, res) => { detectFace.handleDetectFace(req,res, logger)});
-app.post('/signin', (req, res) => { signin.handleSignin(req, res, db, bcrypt, logger)});
+app.post('/signin', signin.signinAuthentification(db, bcrypt));
 app.post('/register', (req, res) =>{ register.handleRegister(req, res, db, bcrypt, logger)});
 app.put('/entries', (req, res) => { entries.handleEntries(req, res, db, logger)});
 
